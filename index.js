@@ -4,13 +4,15 @@ const { authors, books } = require('./temporalDatabase')
 
 const typeDefs = gql`
   type Query {
-    hello: String!
+    bookCount: Int!
+    authorCount: Int!
   }
 `
 
 const resolvers = {
   Query: {
-    hello: () => { return "world" }
+    bookCount: () => books.length,
+    authorCount: () => authors.length
   }
 }
 
