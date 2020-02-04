@@ -1,6 +1,6 @@
-
 const { ApolloServer, gql } = require('apollo-server')
-const { authors, books } = require('./temporalDatabase')
+let { authors, books } = require('./temporalDatabase')
+const uuid = require('uuid/v1')
 
 const typeDefs = gql`
   type Book {
@@ -16,6 +16,15 @@ const typeDefs = gql`
     id: ID!
     born: Int
     bookCount: Int
+  }
+
+  type Mutation {
+    addBook(
+      title: String!
+      published: Int!
+      author: String!
+      genres: [String]
+    ): Book
   }
 
   type Query {
@@ -50,6 +59,18 @@ const resolvers = {
     id: (root) => root.id,
     born: (root) => root.born,
     bookCount: (root) => books.filter(book => book.author === root.name).length,
+  },
+  Mutation: {
+    addBook: (root, args) => {
+      const authorExists = authors.find(author => author.name === args.author)
+      if(!authorExists){
+        const newAuthor = { name: args.author, id: uuid() }
+        authors = authors.concat(newAuthor)
+      }
+      const newBook = { ...args, id: uuid() }
+      books = books.concat(newBook)
+      return newBook
+    }
   }
 }
 
