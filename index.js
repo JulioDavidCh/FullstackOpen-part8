@@ -25,6 +25,10 @@ const typeDefs = gql`
       author: String!
       genres: [String]
     ): Book
+    editAuthor(
+      name: String!
+      setToBorn: Int!
+    ): Author
   }
 
   type Query {
@@ -70,6 +74,17 @@ const resolvers = {
       const newBook = { ...args, id: uuid() }
       books = books.concat(newBook)
       return newBook
+    },
+    editAuthor: (root, args) => {
+      let userToEdit = authors.find(author => author.name === args.name)
+      if(!userToEdit) return null
+      userToEdit = { ...userToEdit, born: args.setToBorn }
+      authors = authors.map(author =>
+        author.name === userToEdit.name
+        ? userToEdit
+        : author
+      )
+      return userToEdit
     }
   }
 }
