@@ -95,7 +95,7 @@ const resolvers = {
   },
   Mutation: {
     addBook: async (root, args) => {
-      let authorInDb = await Authors.findOne({ author: args.author })
+      let authorInDb = await Authors.findOne({ name: args.author })
       if(!authorInDb){
         authorInDb = new Authors({ name: args.author })
         await authorInDb.save()
