@@ -68,18 +68,13 @@ const resolvers = {
       return authorsDb.length
     },
     allBooks: async (root, args) => {
-      // let deliveredBooks = books
-      // if(args.author){
-      //   deliveredBooks = books.filter(book => book.author === args.author)
-      // }
-      // if(args.genre){
-      //   deliveredBooks = deliveredBooks.filter(
-      //     book => book.genres.indexOf(args.genre) > -1
-      //   )
-      // }
-      // return deliveredBooks
-      const booksDb = await Books.find({})
-      return booksDb 
+      let deliveredBooks = await Books.find({})
+      if(args.genre){
+        deliveredBooks = deliveredBooks.filter(
+          book => book.genres.indexOf(args.genre) > -1
+        )
+      }
+      return deliveredBooks
     }
     ,
     allAuthors: async () => {
@@ -91,7 +86,10 @@ const resolvers = {
     name: (root) => root.name,
     id: (root) => root.id,
     born: (root) => root.born,
-    bookCount: (root) => books.filter(book => book.author === root.name).length,
+    bookCount: async (root) => {
+      const authorsBooks = await Books.find({author: root.id})
+      return authorsBooks.length
+    },
   },
   Mutation: {
     addBook: async (root, args) => {
@@ -105,15 +103,13 @@ const resolvers = {
 
       return newBook
     },
-    editAuthor: (root, args) => {
-      let userToEdit = authors.find(author => author.name === args.name)
-      if(!userToEdit) return null
-      userToEdit = { ...userToEdit, born: args.setToBorn }
-      authors = authors.map(author =>
-        author.name === userToEdit.name
-        ? userToEdit
-        : author
+    editAuthor: async (root, args) => {
+      let userToEdit = await Authors.findOneAndUpdate(
+        {name: args.name},
+        {born: args.setToBorn},
+        {new: true}
       )
+      if(!userToEdit) return null
       return userToEdit
     }
   }
