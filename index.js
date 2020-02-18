@@ -1,4 +1,4 @@
-const { ApolloServer, gql } = require('apollo-server')
+const { ApolloServer, gql, UserInputError  } = require('apollo-server')
 const { MONGODB_URI } = require('./utils/config')
 let { authors, books } = require('./temporalDatabase') // <- delete soon
 const mongoose = require('mongoose')
@@ -93,13 +93,37 @@ const resolvers = {
   },
   Mutation: {
     addBook: async (root, args) => {
+      // console.log({
+      //   title: [args.title, (typeof args.title)],
+      //   published: [args.published, (typeof args.published)],
+      //   author: [args.author, (typeof args.author)],
+      //   genres: [args.genres, {isString: (args.genres.every(genre => typeof genre === 'string'))}]
+      // })
+      // if(args.title.length < 2){
+      //   throw new UserInputError('Length too short', {
+      //     invalidArgs: args.title
+      //   })
+      // }
       let authorInDb = await Authors.findOne({ name: args.author })
       if(!authorInDb){
         authorInDb = new Authors({ name: args.author })
-        await authorInDb.save()
+        try{
+          await authorInDb.save()
+        }catch(exception){
+          throw new UserInputError(exception.message, {
+            invalidArgs: args.author
+          })
+        }
       }
       const newBook = new Books({ ...args, author: authorInDb._id })
-      await newBook.save()
+
+      try{
+        await newBook.save()
+      }catch(exception){
+        throw new UserInputError(exception.message, {
+          invalidArgs: args.title
+        })
+      }
 
       return newBook
     },
