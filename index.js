@@ -4,7 +4,9 @@ let { authors, books } = require('./temporalDatabase') // <- delete soon
 const mongoose = require('mongoose')
 const Authors = require('./models/authorModel')
 const Books = require('./models/bookModel')
+const Users = require('./models/userModel')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 
 const JWT_SECRET = 'NEED_HERE_A_SECRET_KEY'
 
@@ -21,6 +23,16 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true })
   })
 
 const typeDefs = gql`
+  type User {
+    username: String!
+    favoriteGenre: String!
+    id: ID!
+  }
+
+  type Token {
+    value: String!
+  }
+
   type Book {
     title: String!
     published: Int!
@@ -47,6 +59,15 @@ const typeDefs = gql`
       name: String!
       setToBorn: Int!
     ): Author
+    createUser(
+      username: String!
+      password: String!
+      favoriteGenre: String
+    ): User
+    login(
+      username: String!
+      password: String!
+    ): Token
   }
 
   type Query {
@@ -54,6 +75,7 @@ const typeDefs = gql`
     authorCount: Int!
     allBooks(author: String, genre: String): [Book!]!
     allAuthors: [Author!]!
+    me: User
   }
 `
 
@@ -75,11 +97,13 @@ const resolvers = {
         )
       }
       return deliveredBooks
-    }
-    ,
+    },
     allAuthors: async () => {
       const authorsDb = await Authors.find({})
       return authorsDb
+    },
+    me: (root, args, context) => {
+      return context.currentUser
     }
   },
   Author: {
@@ -93,17 +117,6 @@ const resolvers = {
   },
   Mutation: {
     addBook: async (root, args) => {
-      // console.log({
-      //   title: [args.title, (typeof args.title)],
-      //   published: [args.published, (typeof args.published)],
-      //   author: [args.author, (typeof args.author)],
-      //   genres: [args.genres, {isString: (args.genres.every(genre => typeof genre === 'string'))}]
-      // })
-      // if(args.title.length < 2){
-      //   throw new UserInputError('Length too short', {
-      //     invalidArgs: args.title
-      //   })
-      // }
       let authorInDb = await Authors.findOne({ name: args.author })
       if(!authorInDb){
         authorInDb = new Authors({ name: args.author })
@@ -135,6 +148,37 @@ const resolvers = {
       )
       if(!userToEdit) return null
       return userToEdit
+    },
+    createUser: async (root, args) => {
+      const saltedRounds = 10
+      const passwordHash = await bcrypt.hash(args.password, saltedRounds)
+      const newUser = new Users({
+        username: args.username,
+        passwordHash,
+        favoriteGenre: args.favoriteGenre
+      })
+
+      await newUser.save()
+
+      return newUser.toJSON()
+    },
+    login: async (root, args) => {
+      const foundUser = await Users.findOne({username: args.username})
+      const correctPassword = foundUser
+      ? await bcrypt.compare(args.password, foundUser.passwordHash)
+      : false
+
+      if(correctPassword){
+        const userForToken = {
+          username: foundUser.username,
+          id: foundUser._id
+        }
+  
+        return {
+          value: jwt.sign(userForToken, JWT_SECRET)
+        }
+      }
+      return null
     }
   }
 }
@@ -142,6 +186,16 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  context: async ({ req }) => {
+    const auth = req ? req.headers.authorization : null
+    if (auth && auth.toLowerCase().startsWith('bearer ')) {
+      const decodedToken = jwt.verify(
+        auth.substring(7), JWT_SECRET
+      )
+      const currentUser = await (await Users.findById(decodedToken.id)).toJSON()
+      return { currentUser }
+    }
+  }
 })
 
 server.listen().then(({ url }) => {
