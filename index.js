@@ -90,7 +90,14 @@ const resolvers = {
       return authorsDb.length
     },
     allBooks: async (root, args) => {
-      let deliveredBooks = await Books.find({})
+      let populatedBooks = await Books.find({}).populate('author', {name: true})
+      //kind of ugly the way we mapped populatedBooks after populated
+      //there should be a better solution
+      let deliveredBooks = populatedBooks.map(book => {
+        book._doc.author = book._doc.author.name
+        return book._doc
+      })
+
       if(args.genre){
         deliveredBooks = deliveredBooks.filter(
           book => book.genres.indexOf(args.genre) > -1
