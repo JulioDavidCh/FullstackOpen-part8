@@ -1,6 +1,5 @@
 const { ApolloServer, gql, UserInputError  } = require('apollo-server')
 const { MONGODB_URI } = require('./utils/config')
-let { authors, books } = require('./temporalDatabase') // <- delete soon
 const mongoose = require('mongoose')
 const Authors = require('./models/authorModel')
 const Books = require('./models/bookModel')
@@ -124,6 +123,14 @@ const resolvers = {
   },
   Mutation: {
     addBook: async (root, args) => {
+      const loggedUser = context.currentUser
+      ? await Users.find({username: context.currentUser.username})
+      : null
+
+      if(!loggedUser){
+        throw new UserInputError('Bad authorizacion token')
+      }
+
       let authorInDb = await Authors.findOne({ name: args.author })
       if(!authorInDb){
         authorInDb = new Authors({ name: args.author })
@@ -147,7 +154,15 @@ const resolvers = {
 
       return newBook
     },
-    editAuthor: async (root, args) => {
+    editAuthor: async (root, args, context) => {
+      const loggedUser = context.currentUser
+      ? await Users.find({username: context.currentUser.username})
+      : null
+
+      if(!loggedUser){
+        throw new UserInputError('Bad authorizacion token')
+      }
+
       let userToEdit = await Authors.findOneAndUpdate(
         {name: args.name},
         {born: args.setToBorn},
