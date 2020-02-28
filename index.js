@@ -122,7 +122,7 @@ const resolvers = {
     },
   },
   Mutation: {
-    addBook: async (root, args) => {
+    addBook: async (root, args, context) => {
       const loggedUser = context.currentUser
       ? await Users.find({username: context.currentUser.username})
       : null
