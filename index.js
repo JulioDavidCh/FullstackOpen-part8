@@ -1,4 +1,4 @@
-const { ApolloServer, gql, UserInputError  } = require('apollo-server')
+const { ApolloServer, gql, UserInputError, PubSub } = require('apollo-server')
 const { MONGODB_URI } = require('./utils/config')
 const mongoose = require('mongoose')
 const Authors = require('./models/authorModel')
@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')
 
 const JWT_SECRET = 'NEED_HERE_A_SECRET_KEY'
+const pubsub = new PubSub()
 
 mongoose.set('useFindAndModify', false)
 
