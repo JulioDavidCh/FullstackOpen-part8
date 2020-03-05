@@ -48,6 +48,10 @@ const typeDefs = gql`
     bookCount: Int
   }
 
+  type Subscription {
+    bookAdded: Book!
+  }
+
   type Mutation {
     addBook(
       title: String!
@@ -153,6 +157,8 @@ const resolvers = {
         })
       }
 
+      pubsub.publish('BOOK_ADDED', { bookAdded: newBook })
+
       return newBook
     },
     editAuthor: async (root, args, context) => {
@@ -203,7 +209,12 @@ const resolvers = {
       }
       return null
     }
-  }
+  },
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator(['BOOK_ADDED'])
+    },
+  },
 }
 
 const server = new ApolloServer({
@@ -221,6 +232,7 @@ const server = new ApolloServer({
   }
 })
 
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
   console.log(`Server ready at ${url}`)
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`)
 })
