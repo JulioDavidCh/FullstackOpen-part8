@@ -111,20 +111,16 @@ const resolvers = {
     },
     allAuthors: async () => {
       const authorsDb = await Authors.find({})
-      return authorsDb
+      const booksDb = await Books.find({})
+      let authorsToDeliver = authorsDb.map(author => {
+        author.bookCount = booksDb.filter(book => author._id.toString() === book.author.toString()).length
+        return author
+      })
+      return authorsToDeliver
     },
     me: (root, args, context) => {
       return context.currentUser
     }
-  },
-  Author: {
-    name: (root) => root.name,
-    id: (root) => root.id,
-    born: (root) => root.born,
-    bookCount: async (root) => {
-      const authorsBooks = await Books.find({author: root.id})
-      return authorsBooks.length
-    },
   },
   Mutation: {
     addBook: async (root, args, context) => {
